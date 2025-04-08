@@ -1,0 +1,1979 @@
+<script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+<!-- Add Chart.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<!-- Bin Dashboard with Search Functionality -->
+<style>
+  /* Main dashboard styles */
+  #data-table-container {
+    margin-top: 20px;
+    overflow: auto;
+    max-height: 400px;
+    font-family: Arial, sans-serif;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  
+  th {
+    padding: 8px;
+    background-color: #f2f2f2;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  td {
+    padding: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  #loading-indicator {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+  
+  #error-message {
+    padding: 10px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+  
+  /* Search functionality styles */
+  .search-container {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #F0F4F8;
+    border-radius: 12px;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+  }
+  
+  .search-input-wrapper {
+    display: flex;
+    gap: 10px;
+  }
+  
+  #bin-search-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 10px;
+    background-color: white;
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+    font-family: inherit;
+    font-size: 16px;
+  }
+  
+  .button.search-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+  }
+  
+  .button.search-button:hover {
+    background-color: #3e8e41;
+    transform: translateY(-2px);
+  }
+  
+  .search-results {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+  }
+  
+  .bin-not-found {
+    color: #F44336;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+  }
+  
+  .bin-search-detail {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .search-emoji {
+    font-size: 40px;
+  }
+  
+  .search-info {
+    flex: 1;
+  }
+  
+  .search-title {
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 5px;
+  }
+  
+  .search-stats {
+    font-size: 16px;
+  }
+  
+  .highlight {
+    animation: highlight-pulse 2s infinite;
+  }
+  
+  @keyframes highlight-pulse {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(76, 175, 80, 0.2); }
+  }
+  
+  /* Fill level styling */
+  .level-low {
+    color: #4CAF50;
+    font-weight: bold;
+  }
+  
+  .level-medium {
+    color: #FFC107;
+    font-weight: bold;
+  }
+  
+  .level-high {
+    color: #F44336;
+    font-weight: bold;
+  }
+
+  /* Bin Visualization Styles */
+  .visualization-container {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #F0F4F8;
+    border-radius: 12px;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+  }
+  
+  .bin-visualization-header {
+    margin-bottom: 15px;
+  }
+  
+  .bin-visualization-header h3 {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    margin: 0;
+  }
+  
+  .bin-animation-container {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  #bin-animation {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .bin-stats {
+    flex: 1;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  #bin-fill-percentage {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  #bin-last-updated {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  /* Initially hide the visualization container */
+  .visualization-container {
+    display: none;
+  }
+  
+  /* Enhanced chart styles */
+  #trend-chart-container {
+    height: 250px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+    position: relative;
+  }
+  
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  
+  .legend-label {
+    font-size: 14px;
+  }
+  
+  /* Tooltip customization */
+  .chart-tooltip {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+    color: white !important;
+    font-size: 14px !important;
+    font-family: Arial, sans-serif !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  /* Recent searches styling */
+  .recent-searches-container {
+    margin: 15px 0;
+    padding: 12px 15px;
+    background-color: #F0F4F8;
+    border-radius: 12px;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+  }
+  
+  .recent-searches-header h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #555;
+  }
+  
+  .recent-search-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .recent-search-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .recent-search-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+  }
+  
+  .recent-bin-id {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .recent-fill-level {
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 2px 5px;
+  }
+  
+  .recent-time {
+    font-size: 12px;
+    color: #888;
+  }
+  
+  /* Filter controls styling */
+  .filter-controls {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #F0F4F8;
+    border-radius: 12px;
+    box-shadow: 3px 3px 6px #C8D0E0, -3px -3px 6px #FFFFFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .filter-button {
+    background-color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .filter-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+  }
+  
+  .active-filter {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  .date-range-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .date-range-select {
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background-color: white;
+    font-family: inherit;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* Refresh button styling */
+  .refresh-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1000;
+  }
+  
+  .refresh-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+  }
+  
+  .refresh-button svg {
+    transition: transform 0.5s ease;
+  }
+  
+  .refreshing svg {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .bin-animation-container {
+      flex-direction: column;
+    }
+    
+    .bin-stats {
+      margin-left: 0;
+      margin-top: 15px;
+      text-align: center;
+    }
+    
+    .filter-controls {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .filter-buttons, .date-range-container {
+      width: 100%;
+    }
+    
+    .refresh-button {
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      padding: 0;
+    }
+    
+    .refresh-button span {
+      display: none;
+    }
+  }
+</style>
+
+<!-- Search Container -->
+<div class="search-container">
+  <div class="search-input-wrapper">
+    <input type="text" id="bin-search-input" placeholder="Enter bin ID...">
+    <button id="bin-search-button" class="button search-button">Search</button>
+  </div>
+  <div id="search-results" class="search-results" style="display: none;"></div>
+</div>
+
+<!-- Recent Searches Container (will be populated by JS) -->
+<div id="recent-searches" class="recent-searches-container" style="display: none;">
+  <div class="recent-searches-header"><h4>Recent Searches</h4></div>
+  <div id="recent-search-items" class="recent-search-items"></div>
+</div>
+
+<!-- Filter Controls -->
+<div class="filter-controls">
+  <div class="filter-buttons">
+    <button class="filter-button active-filter" data-filter="all">All Bins</button>
+    <button class="filter-button" data-filter="high">High Fill (80%+)</button>
+    <button class="filter-button" data-filter="medium">Medium Fill (50-79%)</button>
+    <button class="filter-button" data-filter="low">Low Fill (<50%)</button>
+  </div>
+  <div class="date-range-container">
+    <label for="date-range">Time Range: </label>
+    <select id="date-range" class="date-range-select">
+      <option value="1">Last 24 Hours</option>
+      <option value="7" selected>Last 7 Days</option>
+      <option value="30">Last 30 Days</option>
+      <option value="90">Last 90 Days</option>
+    </select>
+  </div>
+</div>
+
+<!-- Bin Visualization Container -->
+<div class="visualization-container">
+  <div class="bin-visualization-header">
+    <h3>Bin Fill Level Visualization</h3>
+  </div>
+  <div class="bin-animation-container">
+    
+    <!-- TRYING EXISTING ANIMATION... -->
+    <dotlottie-player 
+    id="bin-animation"
+    src="https://lottie.host/5d5c51a3-813d-47f3-90ab-e2a3547b4cd4/SuNKnwh52F.lottie" 
+    background="transparent" 
+    speed="1" 
+    style="width: 200px; height: 200px" 
+    loop 
+    autoplay>
+  </dotlottie-player>
+
+
+    <div class="bin-stats">
+      <div id="bin-fill-percentage">--</div>
+      <div id="bin-last-updated">Last updated: --</div>
+    </div>
+  </div>
+</div>
+
+<!-- Trend Visualization Container -->
+<div class="trend-visualization-container">
+  <div class="trend-visualization-header">
+    <h3>Bin Fill Level Trend</h3>
+  </div>
+  <div id="trend-chart-container">
+    <canvas id="trendChart"></canvas>
+  </div>
+  <div class="chart-legend">
+    <div class="legend-item">
+      <span class="legend-color" style="background-color: #4CAF50;"></span>
+      <span class="legend-label">Your Bin</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background-color: #2196F3;"></span>
+      <span class="legend-label">Community Average</span>
+    </div>
+  </div>
+</div>
+
+<!-- Loading and Error UI Elements -->
+<div id="loading-indicator" style="display: none;">Loading data...</div>
+<div id="error-message" style="display: none;"></div>
+
+<!-- Data Table Container -->
+<div id="data-table-container"></div>
+
+<!-- Refresh Button -->
+<button id="refresh-button" class="refresh-button">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+  </svg>
+  <span>Refresh</span>
+</button>
+
+<!-- PART 1 ENDS HERE -->
+
+// PART 2 BEGINS HERE
+
+<script>
+// Configuration with Azure Function endpoint
+const config = {
+  apiEndpoint: "https://wcefunctionapp1.azurewebsites.net/api/GetTelemetryData?code=M92VKbzd8QZgDbKCoGylKiqMmGFpW3mh1n9gcwdpq-MNAzFuWaDbWg==",
+  defaultTimeRange: 7,
+  defaultDeviceId: "all"
+};
+
+// Global variable to store the fetched data
+let globalRecords = [];
+
+// Format dates as YYYY-MM-DD
+function formatDate(date) {
+  return date.toISOString().split('T')[0];
+}
+
+// Fetch data from Azure Function
+async function fetchData(deviceId = 'all', days = 7) {
+  try {
+    showLoading(true);
+    hideError();
+
+    // Create date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - parseInt(days));
+
+    // Build URL with query parameters
+    const apiUrl = new URL(config.apiEndpoint);
+    apiUrl.searchParams.append('startDate', formatDate(startDate));
+    apiUrl.searchParams.append('endDate', formatDate(endDate));
+
+    // Add deviceId if not "all"
+    if (deviceId !== "all") {
+      apiUrl.searchParams.append('deviceId', deviceId);
+    }
+
+    // Execute fetch request
+    const response = await fetch(apiUrl.toString(), {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data || data.length === 0) {
+      console.warn('No data available');
+      showError('No data available for the selected criteria');
+      globalRecords = []; // Clear global records
+      return [];
+    }
+
+    console.log(`Received ${data.length} records`);
+    globalRecords = data; // Store data globally
+    return data;
+
+  } catch (error) {
+    console.error('Error in fetchData:', error);
+    showError(`Failed to load data: ${error.message}`);
+    globalRecords = []; // Clear global records
+    return [];
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Display first 10 records in a table
+function displayDataTable(data) {
+  // Create container if it doesn't exist
+  if (!document.getElementById('data-table-container')) {
+    const container = document.createElement('div');
+    container.id = 'data-table-container';
+    container.style.marginTop = '20px';
+    container.style.overflow = 'auto';
+    container.style.maxHeight = '400px';
+    document.body.appendChild(container);
+  }
+
+  const container = document.getElementById('data-table-container');
+
+  // Sort data by timestamp (newest first) before displaying
+  const sortedData = [...data].sort((a, b) => {
+    return new Date(b.timestamp) - new Date(a.timestamp);
+  });
+
+  // Show only first 10 records  
+  const recordsToShow = sortedData.slice(0, 10);
+
+  // Create a summary heading
+  const heading = document.createElement('h3');
+  heading.textContent = `Showing ${recordsToShow.length} of ${data.length} records`;
+  heading.style.fontFamily = 'Arial, sans-serif';
+  heading.style.marginBottom = '10px';
+
+  // Create table
+  const table = document.createElement('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+  table.style.fontFamily = 'Arial, sans-serif';
+  table.style.fontSize = '14px';
+
+  // Get column names from first record
+  const columns = Object.keys(recordsToShow[0] || {});
+
+  // Create table header
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  columns.forEach(column => {
+    const th = document.createElement('th');
+    th.textContent = column.replace(/_/g, ' ').toUpperCase();
+    th.style.padding = '8px';
+    th.style.backgroundColor = '#f2f2f2';
+    th.style.border = '1px solid #ddd';
+    th.style.textAlign = 'left';
+    headerRow.appendChild(th);
+  });
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Create table body with data
+  const tbody = document.createElement('tbody');
+
+  recordsToShow.forEach((record, index) => {
+    const row = document.createElement('tr');
+    row.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+    
+    // Add data attributes for highlighting
+    if (record.device_id) {
+      row.setAttribute('data-device-id', record.device_id);
+    }
+
+    columns.forEach(column => {
+      const td = document.createElement('td');
+      let cellValue = record[column];
+
+      // Format dates nicely
+      if (column === 'timestamp' && cellValue) {
+        try {
+          cellValue = new Date(cellValue).toLocaleString();
+        } catch (e) {
+          // Keep original if date parsing fails
+        }
+      }
+
+      // Format fill level with color coding
+      if (column === 'fill_level' && typeof cellValue === 'number') {
+        let levelClass = 'level-low';
+        if (cellValue >= 80) {
+          levelClass = 'level-high';
+        } else if (cellValue >= 50) {
+          levelClass = 'level-medium';
+        }
+        
+        td.innerHTML = `<span class="${levelClass}">${cellValue}%</span>`;
+      } else {
+        td.textContent = cellValue !== undefined ? String(cellValue) : '';
+      }
+      
+      td.style.padding = '8px';
+      td.style.border = '1px solid #ddd';
+      row.appendChild(td);
+    });
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+
+  // Clear and update container
+  container.innerHTML = '';
+  container.appendChild(heading);
+  container.appendChild(table);
+}
+
+// Helper functions for UI feedback
+function showLoading(isLoading) {
+  const loadingIndicator = document.getElementById('loading-indicator');
+  if (loadingIndicator) {
+    loadingIndicator.style.display = isLoading ? 'block' : 'none';
+  }
+}
+
+function showError(message) {
+  const errorMessage = document.getElementById('error-message');
+  if (errorMessage) {
+    errorMessage.textContent = message;
+    errorMessage.style.display = 'block';
+  }
+}
+
+function hideError() {
+  const errorMessage = document.getElementById('error-message');
+  if (errorMessage) {
+    errorMessage.style.display = 'none';
+  }
+}
+
+// Create loading indicator and error message elements if they don't exist
+function createUIElements() {
+  if (!document.getElementById('loading-indicator')) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading-indicator';
+    loadingDiv.textContent = 'Loading data...';
+    loadingDiv.style.display = 'none';
+    loadingDiv.style.padding = '10px';
+    loadingDiv.style.backgroundColor = '#f8f9fa';
+    loadingDiv.style.border = '1px solid #ddd';
+    loadingDiv.style.borderRadius = '4px';
+    loadingDiv.style.marginTop = '10px';
+    document.body.appendChild(loadingDiv);
+  }
+
+  if (!document.getElementById('error-message')) {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'error-message';
+    errorDiv.style.display = 'none';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.backgroundColor = '#f8d7da';
+    errorDiv.style.color = '#721c24';
+    errorDiv.style.border = '1px solid #f5c6cb';
+    errorDiv.style.borderRadius = '4px';
+    errorDiv.style.marginTop = '10px';
+    document.body.appendChild(errorDiv);
+  }
+}
+
+// Display bin search result
+function displayBinSearchResult(record, matchType = "") {
+  const searchResults = document.getElementById('search-results');
+  if (!searchResults) return;
+  
+  // Extract the data directly from the record
+  const binId = record.device_id || "Unknown";
+  let timestamp = "Unknown";
+  if (record.timestamp) {
+    try {
+      timestamp = new Date(record.timestamp).toLocaleString();
+    } catch (e) {
+      timestamp = record.timestamp;
+    }
+  }
+  
+  const fillLevel = record.fill_level !== undefined ? record.fill_level : 0;
+  const binHeight = record.bin_height || 100;
+  const emptySpaceCm = record.empty_space_cm !== undefined ? record.empty_space_cm : "Unknown";
+  
+  console.log(`Displaying bin data: Fill Level: ${fillLevel}%, Empty Space: ${emptySpaceCm}cm`); // For debugging
+  
+  // Determine emoji and status based on fill level
+  let emoji, description, levelClass;
+  
+  if (fillLevel >= 80) {
+    emoji = '😫';
+    description = 'This bin needs to be emptied soon!';
+    levelClass = 'level-high';
+  } else if (fillLevel >= 50) {
+    emoji = '😐';
+    description = 'This bin is getting full, keep an eye on it.';
+    levelClass = 'level-medium';
+  } else {
+    emoji = '😊';
+    description = 'This bin is doing great! Plenty of room left.';
+    levelClass = 'level-low';
+  }
+  
+  // Create the HTML for the search result
+  let html = `
+    <div class="bin-search-detail">
+      <div class="search-emoji">${emoji}</div>
+      <div class="search-info">
+        <div class="search-title">${binId}</div>`;
+  
+  // Add match type indicator if provided
+  if (matchType) {
+    html += `<div style="font-size: 12px; color: #4CAF50; margin-bottom: 5px;">${matchType}</div>`;
+  }
+  
+  html += `
+        <div class="search-stats">
+          <div>Fill Level: <span class="${levelClass}">${fillLevel}%</span></div>
+          <div>Last Updated: ${timestamp}</div>
+          <div>${description}</div>
+  `;
+  
+  // Add bin height and empty space if available
+  if (binHeight) {
+    html += `<div>Bin Height: ${binHeight} cm</div>`;
+  }
+  
+  if (emptySpaceCm !== "Unknown") {
+    html += `<div>Empty Space: ${emptySpaceCm} cm</div>`;
+  }
+  
+  // Close the HTML tags
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Update the search results
+  searchResults.innerHTML = html;
+  searchResults.style.display = 'block';
+}
+
+// PART 2 ENDS HERE
+</script>
+
+// PART 3 BEGINS HERE
+
+<script>
+// The last few functions from Part 2 are repeated here for context
+function hideError() {
+  const errorMessage = document.getElementById('error-message');
+  if (errorMessage) {
+    errorMessage.style.display = 'none';
+  }
+}
+
+// Create loading indicator and error message elements if they don't exist
+function createUIElements() {
+  if (!document.getElementById('loading-indicator')) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading-indicator';
+    loadingDiv.textContent = 'Loading data...';
+    loadingDiv.style.display = 'none';
+    loadingDiv.style.padding = '10px';
+    loadingDiv.style.backgroundColor = '#f8f9fa';
+    loadingDiv.style.border = '1px solid #ddd';
+    loadingDiv.style.borderRadius = '4px';
+    loadingDiv.style.marginTop = '10px';
+    document.body.appendChild(loadingDiv);
+  }
+
+  if (!document.getElementById('error-message')) {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'error-message';
+    errorDiv.style.display = 'none';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.backgroundColor = '#f8d7da';
+    errorDiv.style.color = '#721c24';
+    errorDiv.style.border = '1px solid #f5c6cb';
+    errorDiv.style.borderRadius = '4px';
+    errorDiv.style.marginTop = '10px';
+    document.body.appendChild(errorDiv);
+  }
+}
+
+
+// Display bin search result
+function displayBinSearchResult(record, matchType = "") {
+  const searchResults = document.getElementById('search-results');
+  if (!searchResults) return;
+  
+  // Extract the data directly from the record
+  const binId = record.device_id || "Unknown";
+  let timestamp = "Unknown";
+  if (record.timestamp) {
+    try {
+      timestamp = new Date(record.timestamp).toLocaleString();
+    } catch (e) {
+      timestamp = record.timestamp;
+    }
+  }
+  
+  const fillLevel = record.fill_level !== undefined ? record.fill_level : 0;
+  const binHeight = record.bin_height || 100;
+  const emptySpaceCm = record.empty_space_cm !== undefined ? record.empty_space_cm : "Unknown";
+  
+  console.log(`Displaying bin data: Fill Level: ${fillLevel}%, Empty Space: ${emptySpaceCm}cm`); // For debugging
+  
+  // Determine emoji and status based on fill level
+  let emoji, description, levelClass;
+  
+  if (fillLevel >= 80) {
+    emoji = '😫';
+    description = 'This bin needs to be emptied soon!';
+    levelClass = 'level-high';
+  } else if (fillLevel >= 50) {
+    emoji = '😐';
+    description = 'This bin is getting full, keep an eye on it.';
+    levelClass = 'level-medium';
+  } else {
+    emoji = '😊';
+    description = 'This bin is doing great! Plenty of room left.';
+    levelClass = 'level-low';
+  }
+  
+  // Create the HTML for the search result
+  let html = `
+    <div class="bin-search-detail">
+      <div class="search-emoji">${emoji}</div>
+      <div class="search-info">
+        <div class="search-title">${binId}</div>`;
+  
+  // Add match type indicator if provided
+  if (matchType) {
+    html += `<div style="font-size: 12px; color: #4CAF50; margin-bottom: 5px;">${matchType}</div>`;
+  }
+  
+  html += `
+        <div class="search-stats">
+          <div>Fill Level: <span class="${levelClass}">${fillLevel}%</span></div>
+          <div>Last Updated: ${timestamp}</div>
+          <div>${description}</div>
+  `;
+  
+  // Add bin height and empty space if available
+  if (binHeight) {
+    html += `<div>Bin Height: ${binHeight} cm</div>`;
+  }
+  
+  if (emptySpaceCm !== "Unknown") {
+    html += `<div>Empty Space: ${emptySpaceCm} cm</div>`;
+  }
+  
+  // Close the HTML tags
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Update the search results
+  searchResults.innerHTML = html;
+  searchResults.style.display = 'block';
+}
+
+// Highlight a bin in the data table
+function highlightBinInTable(binId) {
+  // Remove any existing highlights
+  const existingHighlights = document.querySelectorAll('.highlight');
+  existingHighlights.forEach(el => el.classList.remove('highlight'));
+  
+  // Find rows in the data table that match this bin ID
+  const tableRows = document.querySelectorAll('#data-table-container table tbody tr');
+  let found = false;
+  
+  tableRows.forEach(row => {
+    // Check for the data attribute first
+    const rowDeviceId = row.getAttribute('data-device-id');
+    
+    if (rowDeviceId && rowDeviceId.toLowerCase() === binId.toLowerCase()) {
+      row.classList.add('highlight');
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      found = true;
+    } else {
+      // Fallback to checking cell contents
+      const cells = row.querySelectorAll('td');
+      cells.forEach(cell => {
+        if (cell.textContent && cell.textContent.trim().toLowerCase() === binId.toLowerCase()) {
+          row.classList.add('highlight');
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          found = true;
+        }
+      });
+    }
+  });
+  
+  return found;
+}
+
+// Enhanced searchBin function
+async function searchBin(binId) {
+  // Show loading state
+  const searchResults = document.getElementById('search-results');
+  if (searchResults) {
+    searchResults.innerHTML = '<div style="display:flex; justify-content:center; padding: 10px;"><span class="search-spinner"></span> Searching for bin...</div>';
+    searchResults.style.display = 'block';
+    
+    // Add spinner style if it doesn't exist
+    if (!document.getElementById('spinner-style')) {
+      const style = document.createElement('style');
+      style.id = 'spinner-style';
+      style.textContent = `
+        .search-spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(0,0,0,0.1);
+          border-radius: 50%;
+          border-top-color: #4CAF50;
+          animation: spinner 0.8s linear infinite;
+          margin-right: 10px;
+        }
+        @keyframes spinner {
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+  
+  try {
+    // Hide visualizations initially
+    const visualizationContainer = document.querySelector('.visualization-container');
+    if (visualizationContainer) {
+      visualizationContainer.style.display = 'none';
+    }
+    
+    const trendContainer = document.querySelector('.trend-visualization-container');
+    if (trendContainer) {
+      trendContainer.style.display = 'none';
+    }
+    
+    // Try exact match first
+    const exactData = await fetchData(binId);
+    
+    if (exactData && exactData.length > 0) {
+      // Filter for exact matches only
+      const exactMatches = exactData.filter(record => 
+        record.device_id && record.device_id.toLowerCase() === binId.toLowerCase()
+      );
+      
+      if (exactMatches.length > 0) {
+        // Sort by timestamp to get the most recent record
+        exactMatches.sort((a, b) => {
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+        
+        // Use the most recent exact match
+        const latestRecord = exactMatches[0];
+        console.log('Latest record:', latestRecord);
+        
+        // Display search result
+        displayBinSearchResult(latestRecord, "Exact match found");
+        
+        // Update visualizations with data from the latest record
+        if (latestRecord.fill_level !== undefined) {
+          updateBinFillLevel(latestRecord.fill_level, latestRecord.device_id, latestRecord.timestamp);
+          generateTrendVisualization(binId, exactData);
+        }
+        
+        // Display data table
+        displayDataTable(exactData);
+        
+        // Highlight the bin in the table with smooth scroll
+        setTimeout(() => {
+          highlightBinInTable(binId);
+        }, 300);
+        
+        // Add bin info to recent searches
+        addToRecentSearches(binId, latestRecord.fill_level);
+        
+        return;
+      }
+    }
+    
+    // If we get here, no exact match was found
+    // Show not found message
+    if (searchResults) {
+      searchResults.innerHTML = `
+        <div class="bin-not-found">
+          <div>Bin "${binId}" not found</div>
+          <div style="font-size: 14px; margin-top: 5px;">No exact match found. Please check the bin ID and try again.</div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error searching for bin:', error);
+    if (searchResults) {
+      searchResults.innerHTML = `
+        <div class="bin-not-found">
+          <div>Error searching for bin</div>
+          <div style="font-size: 14px; margin-top: 5px;">${error.message}</div>
+        </div>
+      `;
+    }
+  }
+}
+
+// Lottie animation variables
+let binAnimation = null;
+let currentAnimationData = null;
+
+// Initialize the Lottie animation
+
+
+// PART 3 ENDS HERE
+</script>
+
+// PART 4 BEGINS HERE
+
+<script>
+// The last few lines from Part 3 are repeated here for context
+function initLottieAnimation() {
+  // Bin animation JSON
+  const emptyBinAnimation = {
+    "v": "5.7.4",
+    "fr": 30,
+    "ip": 0,
+    "op": 60,
+    "w": 200,
+    "h": 200,
+    "assets": [],
+    "layers": [
+      {
+        "ddd": 0,
+        "ind": 1,
+        "ty": 4,
+        "nm": "Bin Outline",
+        "sr": 1,
+        "ks": {
+          "o": {"a": 0, "k": 100},
+          "p": {"a": 0, "k": [100, 100, 0]},
+          "a": {"a": 0, "k": [0, 0, 0]},
+          "s": {"a": 0, "k": [100, 100, 100]}
+        },
+        "ao": 0,
+        "shapes": [
+          {
+            "ty": "gr",
+            "it": [
+              {
+                "ty": "rc",
+                "d": 1,
+                "s": {"a": 0, "k": [80, 100]},
+                "p": {"a": 0, "k": [0, 0]},
+                "r": {"a": 0, "k": 0}
+              },
+              {
+                "ty": "st",
+                "c": {"a": 0, "k": [0.2, 0.2, 0.2, 1]},
+                "o": {"a": 0, "k": 100},
+                "w": {"a": 0, "k": 4},
+                "lc": 2,
+                "lj": 1
+              },
+              {
+                "ty": "tr",
+                "p": {"a": 0, "k": [0, 20]},
+                "a": {"a": 0, "k": [0, 0]},
+                "s": {"a": 0, "k": [100, 100]},
+                "r": {"a": 0, "k": 0},
+                "o": {"a": 0, "k": 100}
+              }
+            ],
+            "nm": "Bin Container"
+          },
+          {
+            "ty": "gr",
+            "it": [
+              {
+                "ty": "rc",
+                "d": 1,
+                "s": {"a": 0, "k": [70, 0]},
+                "p": {"a": 0, "k": [0, 0]},
+                "r": {"a": 0, "k": 0}
+              },
+              {
+                "ty": "fl",
+                "c": {"a": 0, "k": [0.12, 0.76, 0.13, 1]},
+                "o": {"a": 0, "k": 100}
+              },
+              {
+                "ty": "tr",
+                "p": {"a": 0, "k": [0, 70]},
+                "a": {"a": 0, "k": [0, 0]},
+                "s": {"a": 0, "k": [100, 100]},
+                "r": {"a": 0, "k": 0},
+                "o": {"a": 0, "k": 100}
+              }
+            ],
+            "nm": "Fill Level"
+          }
+        ],
+        "ip": 0,
+        "op": 60,
+        "st": 0
+      }
+    ]
+  };
+
+  currentAnimationData = JSON.parse(JSON.stringify(emptyBinAnimation));
+  
+  // Initialize animation with default (empty) data
+  binAnimation = lottie.loadAnimation({
+    container: document.getElementById('bin-animation'),
+    renderer: 'svg',
+    loop: true,
+    autoplay: true,
+    animationData: currentAnimationData
+  });
+}
+
+
+// Update the updateBinFillLevel function
+function updateBinFillLevel(fillLevel, binId, timestamp) {
+  // Show the visualization container
+  const visualizationContainer = document.querySelector('.visualization-container');
+  if (visualizationContainer) {
+    visualizationContainer.style.display = 'block';
+  }
+  
+  // Clamp fill level between 0 and 100
+  const clampedFillLevel = Math.max(0, Math.min(100, fillLevel));
+  
+  console.log(`Updating bin animation: Fill level ${clampedFillLevel}%`);
+  
+  // Get the dotlottie-player element
+  const binAnimationPlayer = document.getElementById('bin-animation');
+  
+  // Update animation speed based on fill level
+  if (binAnimationPlayer) {
+    // Higher fill level = faster animation to show urgency
+    if (clampedFillLevel >= 80) {
+      binAnimationPlayer.setAttribute('speed', '1.5');
+      addPulsingEffect();
+    } else if (clampedFillLevel >= 50) {
+      binAnimationPlayer.setAttribute('speed', '1.0');
+      removePulsingEffect();
+    } else {
+      binAnimationPlayer.setAttribute('speed', '0.8');
+      removePulsingEffect();
+    }
+  }
+  
+  // Update text info
+  const binFillPercentage = document.getElementById('bin-fill-percentage');
+  const binLastUpdated = document.getElementById('bin-last-updated');
+  
+  if (binFillPercentage) {
+    // Format with appropriate color
+    let levelClass = 'level-low';
+    if (clampedFillLevel >= 80) {
+      levelClass = 'level-high';
+    } else if (clampedFillLevel >= 50) {
+      levelClass = 'level-medium';
+    }
+    
+    binFillPercentage.innerHTML = `<span class="${levelClass}">${clampedFillLevel}%</span> - ${binId}`;
+  }
+  
+  if (binLastUpdated && timestamp) {
+    try {
+      const formattedDate = new Date(timestamp).toLocaleString();
+      binLastUpdated.textContent = `Last updated: ${formattedDate}`;
+    } catch (e) {
+      binLastUpdated.textContent = `Last updated: ${timestamp}`;
+    }
+  }
+}
+
+// Add pulsing effect for high fill levels
+function addPulsingEffect() {
+  const binAnimationContainer = document.getElementById('bin-animation');
+  if (binAnimationContainer) {
+    binAnimationContainer.classList.add('pulse-animation');
+    
+    // Add the style if it doesn't exist
+    if (!document.getElementById('pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'pulse-style';
+      style.textContent = `
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        .pulse-animation {
+          animation: pulse 1.5s infinite ease-in-out;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+}
+
+// Remove pulsing effect
+function removePulsingEffect() {
+  const binAnimationContainer = document.getElementById('bin-animation');
+  if (binAnimationContainer) {
+    binAnimationContainer.classList.remove('pulse-animation');
+  }
+}
+
+// Generate trend visualization with Chart.js
+function generateTrendVisualization(binId, data) {
+  if (!data || data.length === 0) return;
+  
+  // Filter data for the specific bin
+  const binData = data.filter(record => 
+    record.device_id && record.device_id.toLowerCase() === binId.toLowerCase()
+  );
+  
+  if (binData.length === 0) return;
+  
+  // Sort data by timestamp
+  binData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
+  // Take only the most recent entries (up to 7)
+  const recentData = binData.slice(-7);
+  
+  // Show the trend container
+  const trendContainer = document.querySelector('.trend-visualization-container');
+  if (trendContainer) {
+    trendContainer.style.display = 'block';
+  }
+  
+  // Get canvas context
+  const canvas = document.getElementById('trendChart');
+  if (!canvas) return;
+  
+  // Generate label dates and bin fill level data
+  const labels = [];
+  const fillLevelData = [];
+  
+  recentData.forEach(record => {
+    // Format date label
+    let dateLabel = "Unknown";
+    if (record.timestamp) {
+      try {
+        const date = new Date(record.timestamp);
+        dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
+      } catch (e) {
+        // Keep default if parsing fails
+      }
+    }
+    
+    labels.push(dateLabel);
+    fillLevelData.push(record.fill_level !== undefined ? record.fill_level : 0);
+  });
+  
+  // Generate community average data (simulated for now)
+  const communityAverageData = generateCommunityAverageData(fillLevelData);
+  
+  // Calculate gradient colors for bin data
+  const ctx = canvas.getContext('2d');
+  const binGradient = ctx.createLinearGradient(0, 0, 0, 250);
+  binGradient.addColorStop(0, 'rgba(76, 175, 80, 0.8)');
+  binGradient.addColorStop(1, 'rgba(76, 175, 80, 0.1)');
+  
+  // Calculate gradient colors for community data
+  const communityGradient = ctx.createLinearGradient(0, 0, 0, 250);
+  communityGradient.addColorStop(0, 'rgba(33, 150, 243, 0.6)');
+  communityGradient.addColorStop(1, 'rgba(33, 150, 243, 0.05)');
+  
+  // Destroy any existing chart instance
+  if (window.trendChart instanceof Chart) {
+    window.trendChart.destroy();
+  }
+  
+  // Create new chart
+  window.trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Your Bin',
+          data: fillLevelData,
+          borderColor: '#4CAF50',
+          backgroundColor: binGradient,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#4CAF50',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 3
+        },
+        {
+          label: 'Community Average',
+          data: communityAverageData,
+          borderColor: '#2196F3',
+          backgroundColor: communityGradient,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#2196F3', 
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+          borderDash: [5, 5]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false // We have custom legend
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          titleFont: {
+            size: 14,
+            family: 'Arial'
+          },
+          bodyFont: {
+            size: 13,
+            family: 'Arial'
+          },
+          padding: 10,
+          cornerRadius: 4,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ' + context.raw + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: {
+            display: true,
+            text: 'Fill Level (%)',
+            font: {
+              size: 12
+            }
+          },
+          grid: {
+            color: 'rgba(200, 200, 200, 0.2)'
+          },
+          ticks: {
+            callback: function(value) {
+              return value + '%';
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: 'Date',
+            font: {
+              size: 12
+            }
+          }
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart'
+      }
+    }
+  });
+}
+
+// Generate simulated community average data based on bin data
+function generateCommunityAverageData(binData) {
+  if (!binData || binData.length === 0) {
+    return Array(7).fill(50); // Default placeholder data
+  }
+  
+  // Create realistic community averages based on the bin data
+  // with some randomness to simulate real-world variation
+  return binData.map(value => {
+    // Start with a baseline of 5-15% lower fill level than the bin
+    // This assumes most bins are emptied on a regular schedule
+    const baselineOffset = Math.random() * 10 + 5;
+    const baseValue = Math.max(0, value - baselineOffset);
+    
+    // Add some random variation (±7%)
+    const variation = (Math.random() * 14) - 7;
+    
+    // Ensure the result is between 0 and 100
+    return Math.max(0, Math.min(100, Math.round(baseValue + variation)));
+  });
+}
+
+// Store recent searches in local storage
+function addToRecentSearches(binId, fillLevel) {
+  try {
+    // Get existing searches
+    let recentSearches = [];
+    const storedSearches = localStorage.getItem('recentBinSearches');
+    
+    if (storedSearches) {
+      recentSearches = JSON.parse(storedSearches);
+    }
+    
+    // Add new search, avoid duplicates
+    const existingIndex = recentSearches.findIndex(item => item.binId === binId);
+    
+    if (existingIndex >= 0) {
+      // Update existing entry
+      recentSearches[existingIndex] = {
+        binId,
+        fillLevel,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Add new entry
+      recentSearches.unshift({
+        binId,
+        fillLevel,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Keep only the 5 most recent
+      if (recentSearches.length > 5) {
+        recentSearches = recentSearches.slice(0, 5);
+      }
+    }
+    
+    // Save back to storage
+    localStorage.setItem('recentBinSearches', JSON.stringify(recentSearches));
+    
+    // Update UI if needed
+    updateRecentSearchesUI();
+  } catch (error) {
+    console.error('Error saving recent search:', error);
+  }
+}
+
+// PART 4 ENDS HERE
+</script>
+
+// PART 5 BEGINS HERE
+
+<script>
+// The last few lines from Part 4 are repeated here for context
+function addToRecentSearches(binId, fillLevel) {
+  try {
+    // Get existing searches
+    let recentSearches = [];
+    const storedSearches = localStorage.getItem('recentBinSearches');
+    
+    if (storedSearches) {
+      recentSearches = JSON.parse(storedSearches);
+    }
+    
+    // Add new search, avoid duplicates
+    const existingIndex = recentSearches.findIndex(item => item.binId === binId);
+    
+    if (existingIndex >= 0) {
+      // Update existing entry
+      recentSearches[existingIndex] = {
+        binId,
+        fillLevel,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Add new entry
+      recentSearches.unshift({
+        binId,
+        fillLevel,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Keep only the 5 most recent
+      if (recentSearches.length > 5) {
+        recentSearches = recentSearches.slice(0, 5);
+      }
+    }
+    
+    // Save back to storage
+    localStorage.setItem('recentBinSearches', JSON.stringify(recentSearches));
+    
+    // Update UI if needed
+    updateRecentSearchesUI();
+  } catch (error) {
+    console.error('Error saving recent search:', error);
+  }
+}
+
+// PART 5 CONTINUED
+
+// Update recent searches UI
+function updateRecentSearchesUI() {
+  const recentSearchesContainer = document.getElementById('recent-searches');
+  if (!recentSearchesContainer) return;
+  
+  try {
+    const storedSearches = localStorage.getItem('recentBinSearches');
+    if (!storedSearches) {
+      recentSearchesContainer.style.display = 'none';
+      return;
+    }
+    
+    const recentSearches = JSON.parse(storedSearches);
+    if (recentSearches.length === 0) {
+      recentSearchesContainer.style.display = 'none';
+      return;
+    }
+    
+    // Show container
+    recentSearchesContainer.style.display = 'block';
+    
+    // Create HTML for recent searches
+    const searchItemsContainer = document.getElementById('recent-search-items');
+    if (!searchItemsContainer) return;
+    
+    searchItemsContainer.innerHTML = '';
+    
+    recentSearches.forEach(search => {
+      // Format relative time
+      let timeAgo = 'recently';
+      try {
+        const searchDate = new Date(search.timestamp);
+        const now = new Date();
+        const diffMs = now - searchDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins < 1) {
+          timeAgo = 'just now';
+        } else if (diffMins < 60) {
+          timeAgo = `${diffMins}m ago`;
+        } else {
+          const diffHours = Math.floor(diffMins / 60);
+          if (diffHours < 24) {
+            timeAgo = `${diffHours}h ago`;
+          } else {
+            const diffDays = Math.floor(diffHours / 24);
+            timeAgo = `${diffDays}d ago`;
+          }
+        }
+      } catch (e) {
+        // Use default if date parsing fails
+      }
+      
+      // Determine level class
+      let levelClass = 'level-low';
+      if (search.fillLevel >= 80) {
+        levelClass = 'level-high';
+      } else if (search.fillLevel >= 50) {
+        levelClass = 'level-medium';
+      }
+      
+      // Create search item
+      const searchItem = document.createElement('div');
+      searchItem.className = 'recent-search-item';
+      searchItem.innerHTML = `
+        <span class="recent-bin-id">${search.binId}</span>
+        <span class="recent-fill-level ${levelClass}">${search.fillLevel}%</span>
+        <span class="recent-time">${timeAgo}</span>
+      `;
+      
+      // Add click event
+      searchItem.addEventListener('click', () => {
+        // Set search input value
+        const searchInput = document.getElementById('bin-search-input');
+        if (searchInput) {
+          searchInput.value = search.binId;
+        }
+        
+        // Trigger search
+        searchBin(search.binId);
+      });
+      
+      searchItemsContainer.appendChild(searchItem);
+    });
+    
+  } catch (error) {
+    console.error('Error updating recent searches UI:', error);
+  }
+}
+
+// Apply filter to data table
+function applyFilter(filterValue) {
+  console.log('Applying filter:', filterValue);
+  
+  // If we have data, filter and redisplay
+  if (globalRecords && globalRecords.length > 0) {
+    let filteredData = [...globalRecords];
+    
+    if (filterValue === 'high') {
+      filteredData = filteredData.filter(record => 
+        record.fill_level !== undefined && record.fill_level >= 80
+      );
+    } else if (filterValue === 'medium') {
+      filteredData = filteredData.filter(record => 
+        record.fill_level !== undefined && record.fill_level >= 50 && record.fill_level < 80
+      );
+    } else if (filterValue === 'low') {
+      filteredData = filteredData.filter(record => 
+        record.fill_level !== undefined && record.fill_level < 50
+      );
+    }
+    
+    // Display filtered data
+    displayDataTable(filteredData);
+  }
+}
+
+// Refresh data with current filters
+async function refreshDataWithCurrentFilters(days = null) {
+  // Get active filter
+  const activeFilterButton = document.querySelector('.filter-button.active-filter');
+  const activeFilter = activeFilterButton ? 
+    activeFilterButton.getAttribute('data-filter') : 'all';
+  
+  // Get current device
+  const currentBinId = document.getElementById('bin-search-input').value.trim();
+  
+  // Get date range
+  const dateRange = days || 
+    (document.getElementById('date-range') ? 
+      document.getElementById('date-range').value : 
+      config.defaultTimeRange);
+  
+  // Fetch data
+  const data = await fetchData(
+    currentBinId || 'all', 
+    dateRange
+  );
+  
+  // Apply filter
+  if (activeFilter !== 'all') {
+    applyFilter(activeFilter);
+  } else {
+    displayDataTable(data);
+  }
+  
+  // Update visualizations if we have a bin selected
+  if (currentBinId && data.some(record => 
+    record.device_id && record.device_id.toLowerCase() === currentBinId.toLowerCase()
+  )) {
+    // Find the latest record for this bin
+    const binRecords = data.filter(record => 
+      record.device_id && record.device_id.toLowerCase() === currentBinId.toLowerCase()
+    );
+    
+    if (binRecords.length > 0) {
+      // Sort to get latest
+      binRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const latestRecord = binRecords[0];
+      
+      // Update visualizations
+      if (latestRecord.fill_level !== undefined) {
+        updateBinFillLevel(latestRecord.fill_level, latestRecord.device_id, latestRecord.timestamp);
+        generateTrendVisualization(currentBinId, data);
+      }
+    }
+  }
+}
+
+// Setup enhanced event listeners for search and filters
+function setupEnhancedEventListeners() {
+  // Standard search button and input
+  const searchButton = document.getElementById('bin-search-button');
+  const searchInput = document.getElementById('bin-search-input');
+  
+  if (searchButton && searchInput) {
+    // Search on button click
+    searchButton.addEventListener('click', () => {
+      const searchTerm = searchInput.value.trim();
+      if (searchTerm) {
+        searchBin(searchTerm);
+      }
+    });
+    
+    // Search on Enter key
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const searchTerm = searchInput.value.trim();
+        if (searchTerm) {
+          searchBin(searchTerm);
+        }
+      }
+    });
+    
+    // Clear results when input is cleared
+    searchInput.addEventListener('input', () => {
+      if (searchInput.value.trim() === '') {
+        const searchResults = document.getElementById('search-results');
+        if (searchResults) {
+          searchResults.style.display = 'none';
+        }
+      }
+    });
+  }
+  
+  // Filter buttons
+  const filterButtons = document.querySelectorAll('.filter-button');
+  filterButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      // Remove active class from all buttons
+      filterButtons.forEach(btn => btn.classList.remove('active-filter'));
+      
+      // Add active class to clicked button
+      button.classList.add('active-filter');
+      
+      // Get filter value and apply filter
+      const filterValue = button.getAttribute('data-filter');
+      if (filterValue) {
+        applyFilter(filterValue);
+      }
+    });
+  });
+  
+  // Date range selector
+  const dateRangeSelector = document.getElementById('date-range');
+  if (dateRangeSelector) {
+    dateRangeSelector.addEventListener('change', () => {
+      const days = dateRangeSelector.value;
+      console.log('Changing date range to', days, 'days');
+      
+      // Refresh data with new date range
+      refreshDataWithCurrentFilters(days);
+    });
+  }
+  
+  // Refresh button
+  const refreshButton = document.getElementById('refresh-button');
+  if (refreshButton) {
+    refreshButton.addEventListener('click', async () => {
+      // Show refreshing state
+      refreshButton.classList.add('refreshing');
+      refreshButton.disabled = true;
+      
+      // Refresh data
+      await refreshDataWithCurrentFilters();
+      
+      // Reset button state after a delay
+      setTimeout(() => {
+        refreshButton.classList.remove('refreshing');
+        refreshButton.disabled = false;
+      }, 500);
+    });
+  }
+}
+
+// Setup automatic refresh
+function setupAutoRefresh() {
+  // Auto-refresh every 5 minutes
+  const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  
+  // Set up interval
+  window.autoRefreshInterval = setInterval(async () => {
+    console.log('Auto-refreshing data...');
+    await refreshDataWithCurrentFilters();
+    
+    // Flash refresh button
+    const refreshButton = document.getElementById('refresh-button');
+    if (refreshButton) {
+      refreshButton.classList.add('refreshing');
+      setTimeout(() => {
+        refreshButton.classList.remove('refreshing');
+      }, 1000);
+    }
+  }, REFRESH_INTERVAL);
+  
+  // Add to window object so it can be cleared later if needed
+  window.clearAutoRefresh = () => {
+    if (window.autoRefreshInterval) {
+      clearInterval(window.autoRefreshInterval);
+      delete window.autoRefreshInterval;
+      console.log('Auto-refresh stopped');
+    }
+  };
+}
+
+// PART 5 ENDS HERE
+</script>
+
+// PART 6 BEGINS HERE
+
+<script>
+// The last few lines from Part 5 are repeated here for context
+function setupAutoRefresh() {
+  // Auto-refresh every 5 minutes
+  const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  
+  // Set up interval
+  window.autoRefreshInterval = setInterval(async () => {
+    console.log('Auto-refreshing data...');
+    await refreshDataWithCurrentFilters();
+    
+    // Flash refresh button
+    const refreshButton = document.getElementById('refresh-button');
+    if (refreshButton) {
+      refreshButton.classList.add('refreshing');
+      setTimeout(() => {
+        refreshButton.classList.remove('refreshing');
+      }, 1000);
+    }
+  }, REFRESH_INTERVAL);
+  
+  // Add to window object so it can be cleared later if needed
+  window.clearAutoRefresh = () => {
+    if (window.autoRefreshInterval) {
+      clearInterval(window.autoRefreshInterval);
+      delete window.autoRefreshInterval;
+      console.log('Auto-refresh stopped');
+    }
+  };
+}
+
+// Helper function to format numbers with commas
+function formatNumber(num) {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Enhanced initialization
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Create UI elements
+    createUIElements();
+    
+    // Setup enhanced event listeners
+    setupEnhancedEventListeners();
+    
+    // Set up auto-refresh
+    setupAutoRefresh();
+    
+    // Initialize Lottie animation - remove this line
+    // initLottieAnimation();
+    
+    // Update recent searches UI
+    updateRecentSearchesUI();
+    
+    // Fetch data
+    const data = await fetchData();
+    console.log('Data loaded successfully:', data.length, 'records');
+    
+    // Display data in a table
+    displayDataTable(data);
+    
+    // Add welcome hint if no search has been performed
+    // ...rest of the code remains the same
+  } catch (error) {
+    console.error('Failed to load initial data:', error);
+  }
+});
+</script>
+
+<!-- PART 6 ENDS HERE -->
